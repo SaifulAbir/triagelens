@@ -5,7 +5,7 @@ AI-assisted test failure triage and test knowledge assistant for synthetic 5G de
 - **Mode A – Triage:** ingest a test campaign (JUnit-style XML + logs), preprocess logs, run deterministic checks, cluster failures by root cause, let an LLM categorise and explain each cluster, match existing tickets. An engineer confirms or corrects every result.
 - **Mode B – Assistant:** chat over specs, runbooks and tickets with cited answers, "not found" when the documents don't answer, and permission-aware search.
 
-The detailed plan is in `plan.md` (local only, not committed). Jira project key: `SCRUM`.
+The detailed plan is in `plan.md` (local only, not committed). Jira project key: `TL`.
 
 ## Confidentiality (hard rules, never break)
 
@@ -47,7 +47,7 @@ The detailed plan is in `plan.md` (local only, not committed). Jira project key:
 
 ## Coding conventions
 
-- Python 3.12, type hints everywhere, `ruff` for lint and format, `pytest` for tests.
+- Python 3.15, type hints everywhere, `ruff` for lint and format, `pytest` for tests.
 - Every new function with logic gets a unit test. Preprocessing and deterministic checks need tests with tricky inputs.
 - All LLM calls go through `libs/model-gateway`. No direct SDK calls elsewhere.
 - Model names and providers come from config, never hard-coded.
@@ -55,8 +55,8 @@ The detailed plan is in `plan.md` (local only, not committed). Jira project key:
 
 ## Workflow
 
-- One Jira story per branch: `SCRUM-<n>-short-name`.
-- Commit messages start with the Jira key: `SCRUM-16: add station and firmware model to simulator`.
+- One Jira story per branch: `TL-<n>-short-name`.
+- Commit messages start with the Jira key: `TL-16: add station and firmware model to simulator`.
 - For changes touching more than one file, propose a plan first and wait for my approval.
 - Run tests and lint before saying a task is done.
 - Update `docs/devlog.md` with anything that broke and how it was fixed.

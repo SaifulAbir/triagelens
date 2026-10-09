@@ -231,6 +231,7 @@ plan.md
 
 # Downloaded public specs (license: download, don't redistribute)
 data/public/*
+!data/public/.gitkeep
 !data/public/download_specs.py
 
 # Generated simulator output (regenerate with the simulator)

@@ -218,3 +218,35 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- TriageLens additions ---
+
+# Local planning notes (personal, never public)
+plan.md
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Downloaded public specs (license: download, don't redistribute)
+data/public/*
+!data/public/download_specs.py
+
+# Generated simulator output (regenerate with the simulator)
+data/synthetic/generated/
+
+# Local model files and caches
+models/
+.cache/
+
+# Eval run outputs (keep summary reports, ignore raw runs)
+evals/runs/
+
+# Node / frontend
+node_modules/
+apps/web/dist/
+
+# Local tooling
+.claude/settings.local.json
+.DS_Store

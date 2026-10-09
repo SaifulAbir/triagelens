@@ -21,6 +21,22 @@ search what the user is allowed to see.
 The LLM provider is swappable: Claude via the Anthropic API, or a local open-weight model for
 on-premise and offline use.
 
+## Architecture (target)
+
+```mermaid
+flowchart LR
+    CI[CI job / uploader CLI] --> API[results-api]
+    UI[Web UI<br/>triage + chat] --> API
+    API --> DB[(Postgres + pgvector)]
+    DB --> WK[worker<br/>preprocess, checks,<br/>cluster, analyse]
+    WK -->|MCP| MCP[MCP servers<br/>history, tickets, knowledge]
+    MCP --> DB
+    WK --> GW[model gateway]
+    GW --> LLM[Claude or local LLM]
+```
+
+Code narrows the evidence first (log preprocessing, deterministic checks, clustering); the LLM then analyzes each cluster using tools over MCP. Components are added as they're built; see [docs/architecture.md](docs/architecture.md) for details.
+
 ## Data
 
 All data in this repository is **synthetic** or comes from **public 3GPP specifications**.

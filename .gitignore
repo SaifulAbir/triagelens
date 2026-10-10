@@ -229,6 +229,9 @@ plan.md
 .env.*
 !.env.example
 
+# Test result exports from other tools (never commit real results)
+*.trx
+
 # Downloaded public specs (license: download, don't redistribute)
 data/public/*
 !data/public/.gitkeep

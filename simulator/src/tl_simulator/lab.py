@@ -26,6 +26,8 @@ class Lab:
     suite: tuple[Release, ...]
     first_night: date
     stations_upgraded_per_night: int = 2
+    # Nights 1..build_nights may be used to build signatures and rules; later nights are for evals.
+    build_nights: int = 10
 
 
 def default_lab() -> Lab:

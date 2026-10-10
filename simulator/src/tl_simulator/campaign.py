@@ -1,4 +1,5 @@
-"""Generate a full campaign: one folder per night with results.xml, logs and metadata."""
+"""Generate a full campaign: one folder per night with results.xml, logs and metadata, plus a
+separate ground_truth/ folder with the true cause of every failure."""
 
 import json
 import random
@@ -7,6 +8,16 @@ from pathlib import Path
 
 from tl_simulator import __version__
 from tl_simulator.catalog import TestCase, build_catalog
+from tl_simulator.effects import build_failure
+from tl_simulator.faults import SCENARIO, Fault, select_fault
+from tl_simulator.groundtruth import (
+    GROUND_TRUTH_DIR,
+    FailureLabel,
+    faults_summary,
+    label_for,
+    labels_summary,
+    split_summary,
+)
 from tl_simulator.junit import TestResult, results_xml
 from tl_simulator.lab import Lab, default_lab, firmware_on, night_date, suite_on
 from tl_simulator.logformat import render_footer, render_header, render_log
@@ -18,16 +29,29 @@ MIN_GAP_MS = 5_000
 MAX_GAP_MS = 20_000
 
 
-def generate_campaign(out_dir: Path, seed: int, nights: int, lab: Lab | None = None) -> None:
+def generate_campaign(
+    out_dir: Path,
+    seed: int,
+    nights: int,
+    lab: Lab | None = None,
+    faults: tuple[Fault, ...] = SCENARIO,
+) -> None:
     lab = lab or default_lab()
     catalog = build_catalog(lab.bands)
     _write_json(out_dir / "lab.json", _lab_summary(lab, catalog))
+    _write_json(out_dir / GROUND_TRUTH_DIR / "faults.json", faults_summary(faults))
+    _write_json(out_dir / GROUND_TRUTH_DIR / "split.json", split_summary(lab, nights))
     for night in range(1, nights + 1):
-        generate_night(out_dir, seed, night, lab, catalog)
+        generate_night(out_dir, seed, night, lab, catalog, faults)
 
 
 def generate_night(
-    out_dir: Path, seed: int, night: int, lab: Lab, catalog: tuple[TestCase, ...]
+    out_dir: Path,
+    seed: int,
+    night: int,
+    lab: Lab,
+    catalog: tuple[TestCase, ...],
+    faults: tuple[Fault, ...] = SCENARIO,
 ) -> list[TestResult]:
     """Generate one night.
 
@@ -39,36 +63,62 @@ def generate_night(
     run_id = f"night-{night:02d}"
     run_dir = out_dir / run_id
     night_start = datetime.combine(night_date(lab, night), NIGHT_START)
+    suite = suite_on(lab, night)
 
-    results = []
+    results: list[TestResult] = []
+    labels: list[FailureLabel] = []
     for queue in assign_stations(rng, lab, catalog, night).values():
         clock = night_start
         for assignment in queue:
-            result = _run_and_write(rng, run_id, run_dir, assignment, clock)
+            fault = select_fault(rng, faults, night, suite, assignment)
+            result, label = _run_and_write(rng, run_id, run_dir, assignment, clock, fault)
             results.append(result)
+            if label is not None:
+                labels.append(label)
             clock += timedelta(
                 milliseconds=result.duration_ms + rng.randint(MIN_GAP_MS, MAX_GAP_MS)
             )
 
     catalog_order = {test.name: index for index, test in enumerate(catalog)}
     results.sort(key=lambda result: catalog_order[result.test.name])
+    labels.sort(key=lambda label: catalog_order[label.test])
     (run_dir / "results.xml").write_bytes(results_xml(run_id, results))
     _write_json(run_dir / "metadata.json", _night_metadata(lab, seed, night, run_id, results))
+    _write_json(out_dir / GROUND_TRUTH_DIR / f"{run_id}.json", labels_summary(labels))
     return results
 
 
 def _run_and_write(
-    rng: random.Random, run_id: str, run_dir: Path, assignment: Assignment, start: datetime
-) -> TestResult:
-    run = run_test(rng, assignment)
+    rng: random.Random,
+    run_id: str,
+    run_dir: Path,
+    assignment: Assignment,
+    start: datetime,
+    fault: Fault | None,
+) -> tuple[TestResult, FailureLabel | None]:
     test, station = assignment.test, assignment.station.name
+    failure = None if fault is None else build_failure(fault.effect, rng, test)
+    injection = fault is not None and rng.random() < fault.injection_chance
+    run = run_test(rng, assignment, failure, injection)
+
     header = render_header(run_id, test.name, station, assignment.firmware, test.band, start)
     log_path = f"logs/{station}/{test.name}.log"
     _write_text(
         run_dir / log_path,
         render_log(header, list(run.lines), render_footer(run.result, run.duration_ms)),
     )
-    return TestResult(test, station, assignment.firmware, start, run.duration_ms, log_path)
+    result = TestResult(
+        test,
+        station,
+        assignment.firmware,
+        start,
+        run.duration_ms,
+        log_path,
+        outcome="passed" if failure is None else "failed",
+        failure_message=run.failure_message,
+    )
+    label = None if fault is None else label_for(run_id, result, fault, run)
+    return result, label
 
 
 def _lab_summary(lab: Lab, catalog: tuple[TestCase, ...]) -> dict[str, object]:
@@ -94,12 +144,13 @@ def _night_metadata(
         "suite_version": suite_on(lab, night),
         "firmware": {s.name: firmware_on(lab, i, night) for i, s in enumerate(lab.stations)},
         "tests": len(results),
+        "failures": sum(1 for result in results if result.outcome == "failed"),
         "seed": seed,
         "generator": f"tl_simulator {__version__}",
     }
 
 
-def _write_json(path: Path, data: dict[str, object]) -> None:
+def _write_json(path: Path, data: object) -> None:
     _write_text(path, json.dumps(data, indent=2) + "\n")
 
 

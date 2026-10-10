@@ -64,8 +64,9 @@ The detailed plan is in `plan.md` (local only, not committed). Jira project key:
 ## Commands
 
 <!-- Fill in as they become real -->
+- Set up Python: `python -m venv .venv`, then `pip install --group dev -e simulator`
 - Start everything: `docker compose up`
 - Tests: `pytest`
 - Lint: `ruff check . && ruff format --check .`
-- Generate a campaign: _TBD_
+- Generate a campaign: `python -m tl_simulator generate --seed 42 --nights 20` (writes to `data/synthetic/generated/`, add `--force` to replace)
 - Run evals: _TBD_

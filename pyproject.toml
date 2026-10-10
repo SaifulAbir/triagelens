@@ -13,6 +13,8 @@ dev = ["ruff", "pytest"]
 # py315 support in ruff is still in preview; see docs/devlog.md.
 target-version = "py314"
 line-length = 100
+# Our own packages, so imports sort them as first-party.
+src = [".", "simulator/src"]
 
 [tool.ruff.lint]
 select = [

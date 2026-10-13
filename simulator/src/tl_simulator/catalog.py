@@ -8,6 +8,11 @@ from dataclasses import dataclass
 SENT = ">>"  # tester -> device
 RECEIVED = "<<"  # device -> tester
 
+DEFAULT_TIMEOUT_MS = 2000
+FAST_TIMEOUT_MS = 500
+# Tests that check tight timing. They use the fast limit and are the ones that can be flaky.
+TIMING_SENSITIVE = {("HO", "PINGPONG"), ("MEAS", "PERIODIC")}
+
 
 @dataclass(frozen=True)
 class Step:
@@ -24,7 +29,7 @@ class TestCase:
     variant: str
     band: str
     steps: tuple[Step, ...]
-    timeout_ms: int = 2000
+    timeout_ms: int = DEFAULT_TIMEOUT_MS
 
 
 REGISTRATION = (
@@ -89,8 +94,13 @@ def build_catalog(bands: tuple[str, ...]) -> tuple[TestCase, ...]:
             variant=variant,
             band=band,
             steps=FAMILY_STEPS[family],
+            timeout_ms=_timeout_for(family, variant),
         )
         for family, variants in FAMILY_VARIANTS.items()
         for variant in variants
         for band in bands
     )
+
+
+def _timeout_for(family: str, variant: str) -> int:
+    return FAST_TIMEOUT_MS if (family, variant) in TIMING_SENSITIVE else DEFAULT_TIMEOUT_MS

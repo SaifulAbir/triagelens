@@ -31,5 +31,11 @@ def test_non_registration_tests_add_their_own_steps():
             assert len(test.steps) > len(REGISTRATION)
 
 
+def test_timing_sensitive_tests_use_the_fast_limit():
+    for test in _catalog():
+        sensitive = (test.family, test.variant) in {("HO", "PINGPONG"), ("MEAS", "PERIODIC")}
+        assert test.timeout_ms == (500 if sensitive else 2000)
+
+
 def test_catalog_order_is_stable():
     assert [t.name for t in _catalog()] == [t.name for t in _catalog()]

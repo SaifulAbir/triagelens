@@ -57,6 +57,12 @@ def test_suite_switches_exactly_on_release_night():
     assert suite_on(lab, 20) == "4.1"
 
 
+def test_build_period_ends_before_the_last_firmware_release():
+    # Firmware 2.3 (and its regression) must only show up in eval nights.
+    lab = default_lab()
+    assert lab.firmware[-1].night > lab.build_nights
+
+
 def test_night_date_counts_from_first_night():
     lab = default_lab()
     assert night_date(lab, 1) == lab.first_night
